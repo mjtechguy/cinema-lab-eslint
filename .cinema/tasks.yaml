@@ -24,6 +24,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#pnpm_test
+        job_digest: sha256:11ca68193567238b117ae86d4e1549ec206ecbd16d044db795f938ae1ac75312
         cpus: 4
         timeout: 60m
         reuse:
@@ -57,10 +58,11 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:654e8b52876a91d6bd7e7a5125fe538203c6d19d37891df25782755392154577
         leg:
             os: ubuntu-latest
             node: 26.x
-            NODE_OPTIONS:
+            NODE_OPTIONS: ""
         cpus: 4
         timeout: 60m
         reuse:
@@ -94,10 +96,11 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:e510d797496abb236158fa71af4eef7fa63738db50412b13cfc03eec6e0cc46c
         leg:
             os: ubuntu-latest
             node: 24.x
-            NODE_OPTIONS:
+            NODE_OPTIONS: ""
         cpus: 4
         timeout: 60m
         reuse:
@@ -131,10 +134,11 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:40f91a807261ed1b6d1f323c6a719fd6a17a5b2cc5d49ef125eb768cd7da4808
         leg:
             os: ubuntu-latest
             node: 22.x
-            NODE_OPTIONS:
+            NODE_OPTIONS: ""
         cpus: 4
         timeout: 60m
         reuse:
@@ -168,10 +172,11 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:7e42ecf6bf38f2ecf6de621663a7ada974247bded9c7792f0b4f6b1123c50251
         leg:
             os: ubuntu-latest
             node: 20.x
-            NODE_OPTIONS:
+            NODE_OPTIONS: ""
         cpus: 4
         timeout: 60m
         reuse:
@@ -204,10 +209,11 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:9b6e1cca396eca6266926662a019172cdbc2a5657c3f82fabf17acb1851b6ccf
         leg:
             os: ubuntu-latest
             node: 20.19.0
-            NODE_OPTIONS:
+            NODE_OPTIONS: ""
         cpus: 4
         timeout: 60m
         reuse:
@@ -241,6 +247,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_on_node
+        job_digest: sha256:55e531129939b94f8502b0defb6b46c4ab276b50b48e49108edc0b56b181aa68
         leg:
             os: ubuntu-latest
             node: 24.x
@@ -286,6 +293,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: ci.yml#test_types
+        job_digest: sha256:4c42ac67811152e429d2b26ff6dae3c2ed50645f739fd9ab3a20a480647a6620
         cpus: 4
         timeout: 60m
         reuse:
@@ -344,6 +352,7 @@ tasks:
             - cmd: [go, version]
             - cmd: [node, --version]
         covers: ci.yml#verify_files
+        job_digest: sha256:444c02d56bad20fcc28b7ed3cf296f6aa66df0c88437211388b455f9028b841f
         cpus: 4
         timeout: 60m
         reuse:
@@ -383,6 +392,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: docs-ci.yml#verify_files
+        job_digest: sha256:dedd5b0cdbcfd1f5abd7abb1682c115a212cff92e9493c208ca40ac20f0f98e3
         cpus: 4
         timeout: 60m
         reuse:
@@ -411,6 +421,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: types-integration.yml#are-the-types-wrong
+        job_digest: sha256:3694f8d7ab6cbb48fcb81449629111c3ede0ce9c8a2c615b22b7e8b3d94ca2d6
         cpus: 4
         timeout: 60m
         reuse:
@@ -439,6 +450,7 @@ tasks:
         toolchain:
             - cmd: [node, --version]
         covers: types-integration.yml#are-the-types-wrong
+        job_digest: sha256:885edd890166453d8ad2be244b317c4c04c2350fd5f2bb340d62c86bf87a9da2
         cpus: 4
         timeout: 60m
         reuse:
