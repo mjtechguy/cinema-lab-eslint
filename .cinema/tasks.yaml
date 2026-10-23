@@ -3,7 +3,7 @@
 schema_version: 1
 tasks:
     # ci.yml: pnpm_test
-    # REVIEW: uses pnpm/action-setup: its tool version must be pinned and fingerprinted (toolchain:)
+    # NOTE: pnpm "latest" resolved to 12.15.0, the newest release today: CI will move on; this pin won't
     # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
     pnpm-test:
         argv:
@@ -13,6 +13,9 @@ tasks:
             - -c
             - |-
                 (
+                npm install -g pnpm@12.15.0
+                )
+                (
                 npm run test:pnpm
                 )
         platform: linux/amd64
@@ -20,39 +23,7 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ci.yml: test_on_browser
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "24" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    test-on-browser:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export TERM=xterm-256color
-                (
-                npm install -g npm@latest
-                )
-                (
-                npm install
-                )
-                (
-                node Makefile cypress
-                )
-                (
-                node Makefile fuzz
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
+        covers: ci.yml#pnpm_test
         cpus: 4
         timeout: 60m
         reuse:
@@ -85,6 +56,11 @@ tasks:
             node: 26.12.1
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 26.x
+            NODE_OPTIONS:
         cpus: 4
         timeout: 60m
         reuse:
@@ -117,6 +93,11 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 24.x
+            NODE_OPTIONS:
         cpus: 4
         timeout: 60m
         reuse:
@@ -149,6 +130,11 @@ tasks:
             node: 22.23.4
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 22.x
+            NODE_OPTIONS:
         cpus: 4
         timeout: 60m
         reuse:
@@ -181,6 +167,11 @@ tasks:
             node: 20.20.2
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 20.x
+            NODE_OPTIONS:
         cpus: 4
         timeout: 60m
         reuse:
@@ -212,6 +203,11 @@ tasks:
             node: 20.19.0
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 20.19.0
+            NODE_OPTIONS:
         cpus: 4
         timeout: 60m
         reuse:
@@ -244,6 +240,11 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_on_node
+        leg:
+            os: ubuntu-latest
+            node: 24.x
+            NODE_OPTIONS: --experimental-transform-types
         cpus: 4
         timeout: 60m
         reuse:
@@ -284,6 +285,7 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
+        covers: ci.yml#test_types
         cpus: 4
         timeout: 60m
         reuse:
@@ -341,6 +343,7 @@ tasks:
         toolchain:
             - cmd: [go, version]
             - cmd: [node, --version]
+        covers: ci.yml#verify_files
         cpus: 4
         timeout: 60m
         reuse:
@@ -379,391 +382,7 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=@eslint/css)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-css:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "@eslint/css" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin @eslint/css
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=@eslint/json)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-json:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "@eslint/json" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin @eslint/json
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=@eslint/markdown)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-markdown:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "@eslint/markdown" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin @eslint/markdown
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=@eslint-community/eslint-plugin-eslint-comments)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-community-eslint-plugin-eslint-comments:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "@eslint-community/eslint-plugin-eslint-comments" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin @eslint-community/eslint-plugin-eslint-comments
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=@typescript-eslint/typescript-eslint)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-typescript-eslint-typescript-eslint:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "@typescript-eslint/typescript-eslint" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin @typescript-eslint/typescript-eslint
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=eslint-plugin-unicorn)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-plugin-unicorn:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "eslint-plugin-unicorn" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin eslint-plugin-unicorn
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
-        cpus: 4
-        timeout: 60m
-        reuse:
-            allowed: true
-            max_age: 24h
-    # ecosystem-tests.yml: test_ecosystem (plugin=eslint-plugin-vue)
-    # REVIEW: a step is conditional (if: steps.get_pm.outputs.pm == 'pnpm'); it is included unconditionally
-    # REVIEW: a step fetches a floating version (@latest / HEAD / master): results can change without a source change
-    # NOTE: Node "lts/*" resolved to 24.22.1, the newest matching release today: CI will move on; this pin won't
-    # NOTE: $GITHUB_ENV, $GITHUB_PATH and $GITHUB_OUTPUT are emulated with temp files, loaded before each step
-    test-ecosystem-eslint-plugin-vue:
-        argv:
-            - bash
-            - -eo
-            - pipefail
-            - -c
-            - |-
-                export GITHUB_ENV=$(mktemp) GITHUB_PATH=$(mktemp) GITHUB_OUTPUT=$(mktemp) GITHUB_STEP_SUMMARY=/dev/null
-                trap 'rm -f "$GITHUB_ENV" "$GITHUB_PATH" "$GITHUB_OUTPUT"' EXIT
-                _gh_load() {
-                  local l n d v x p
-                  while IFS= read -r l; do
-                    n=${l%%=*}
-                    if [[ $n == *'<<'* ]]; then
-                      n=${l%%<<*} d=${l#*<<} v=
-                      while IFS= read -r x && [[ $x != "$d" ]]; do v+=${v:+$'\n'}$x; done
-                      export "$n=$v"
-                    elif [[ $l == *=* ]]; then
-                      export "$n=${l#*=}"
-                    fi
-                  done <"$GITHUB_ENV"
-                  while IFS= read -r p; do [[ -n $p ]] && PATH=$p:$PATH; done <"$GITHUB_PATH"
-                }
-                (
-                  _gh_load
-                echo "pm=$(jq -r --arg plugin "eslint-plugin-vue" '.[$plugin].commands.install[0]' tools/test-ecosystem/plugins-data.json)" >> "$GITHUB_OUTPUT"
-                )
-                (
-                  _gh_load
-                npm install -g corepack@latest
-                corepack enable pnpm
-                )
-                (
-                  _gh_load
-                npm install
-                )
-                (
-                  _gh_load
-                npm run test:ecosystem -- --plugin eslint-plugin-vue
-                )
-        platform: linux/amd64
-        runtime:
-            node: 24.22.1
-        toolchain:
-            - cmd: [node, --version]
+        covers: docs-ci.yml#verify_files
         cpus: 4
         timeout: 60m
         reuse:
@@ -791,6 +410,7 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
+        covers: types-integration.yml#are-the-types-wrong
         cpus: 4
         timeout: 60m
         reuse:
@@ -818,6 +438,7 @@ tasks:
             node: 24.22.1
         toolchain:
             - cmd: [node, --version]
+        covers: types-integration.yml#are-the-types-wrong
         cpus: 4
         timeout: 60m
         reuse:

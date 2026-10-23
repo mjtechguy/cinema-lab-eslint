@@ -9,7 +9,32 @@ permissions:
     contents: read
 
 jobs:
+    cinema:
+        runs-on: ubuntu-latest
+        permissions: { contents: read }
+        outputs:
+            skip_pnpm_test: ${{ steps.verify.outputs.skip_pnpm_test }}
+            skip_test_types: ${{ steps.verify.outputs.skip_test_types }}
+            skip_verify_files: ${{ steps.verify.outputs.skip_verify_files }}
+            exclude_test_on_node: ${{ steps.verify.outputs.exclude_test_on_node }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with: { fetch-depth: 0, persist-credentials: false }
+            - name: install cinema
+              env: { GH_TOKEN: "${{ github.token }}" }
+              run: |
+                  gh release download cinema-lab -R "$GITHUB_REPOSITORY" -p cinema-linux-amd64 -O "$RUNNER_TEMP/cinema"
+                  chmod +x "$RUNNER_TEMP/cinema" && sudo mv "$RUNNER_TEMP/cinema" /usr/local/bin/cinema
+            - id: verify
+              name: skip jobs that already passed (signed cinema receipts)
+              env:
+                  CINEMA_TRUSTED_KEYS: "${{ vars.CINEMA_TRUSTED_KEYS }}"
+                  CINEMA_FETCH_TOKEN: "${{ github.token }}"
+              run: cinema verify --event "$GITHUB_EVENT_PATH" --skip-outputs ci.yml
+
     verify_files:
+        needs: cinema
+        if: ${{ !cancelled() && needs.cinema.outputs.skip_verify_files != 'true' }}
         name: Verify Files
         runs-on: ubuntu-latest
         steps:
@@ -58,9 +83,12 @@ jobs:
               run: npm run fmt:check
 
     test_on_node:
+        needs: cinema
+        if: ${{ !cancelled() }}
         name: Test
         strategy:
             matrix:
+                exclude: ${{ fromJSON(needs.cinema.outputs.exclude_test_on_node || '[]') }}
                 os: [ubuntu-latest]
                 node: [26.x, 24.x, 22.x, 20.x, "20.19.0"]
                 NODE_OPTIONS: [""]
@@ -117,6 +145,8 @@ jobs:
               run: node Makefile fuzz
 
     test_types:
+        needs: cinema
+        if: ${{ !cancelled() && needs.cinema.outputs.skip_test_types != 'true' }}
         name: Test Types
         runs-on: ubuntu-latest
 
@@ -151,6 +181,8 @@ jobs:
         uses: eslint/workflows/.github/workflows/ci-package-manager.yml@main
 
     pnpm_test:
+        needs: cinema
+        if: ${{ !cancelled() && needs.cinema.outputs.skip_pnpm_test != 'true' }}
         name: Test pnpm Type Support
         runs-on: ubuntu-latest
         steps:
